@@ -11,8 +11,7 @@ from openai import OpenAI
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
 SECRET_KEY   = os.environ.get("SECRET_KEY", os.urandom(32))
 OPENAI_KEY   = os.environ.get("OPENAI_API_KEY")
-# DO NOT force a project header; let the key's project context apply.
-ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")   # e.g. https://<your>.vercel.app
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 
 if not APP_PASSWORD:  raise SystemExit("ERROR: APP_PASSWORD not set.")
@@ -20,9 +19,15 @@ if not OPENAI_KEY:    raise SystemExit("ERROR: OPENAI_API_KEY not set.")
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+# Make session cookie cross-site capable for frontend on a different domain
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True,        # requires HTTPS (Render uses HTTPS)
+    SESSION_COOKIE_NAME="ainutri_sess",
+)
+# CORS for your frontend; origin must NOT be "*" when using credentials
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGIN}}, supports_credentials=True)
 
-# The client will use the project from your project-scoped API key automatically.
 client = OpenAI()
 MODEL = "gpt-4o-mini"
 
@@ -104,8 +109,7 @@ def login():
     pwd = (data.get("password") or "").strip()
     if pwd != APP_PASSWORD:
         return jsonify({"ok": False, "error": "Bad password"}), 401
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = db.execute(select(User).limit(1)).scalar_one_or_none()
         if not u:
             u = User(); db.add(u); db.commit()
@@ -123,8 +127,7 @@ def logout():
 @app.route("/me", methods=["GET"])
 @require_auth
 def me():
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
         prefs = u.preferences.data if u.preferences else "{}"
@@ -134,8 +137,7 @@ def me():
 @require_auth
 def preferences():
     if request.method == "OPTIONS": return ("", 204)
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
         if request.method == "GET":
@@ -154,8 +156,7 @@ def preferences():
 @require_auth
 def conversations():
     if request.method == "OPTIONS": return ("", 204)
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
         if request.method == "GET":
@@ -172,8 +173,7 @@ def conversations():
 @require_auth
 def conv_messages(cid: int):
     if request.method == "OPTIONS": return ("", 204)
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
         c = db.get(Conversation, cid)
@@ -211,11 +211,9 @@ def chat_legacy():
     if request.method == "OPTIONS": return ("", 204)
     data = request.get_json(force=True) or {}
     text = (data.get("message") or "").strip()
-    from sqlalchemy.orm import Session as SASession
-    with SASession(engine) as db:
+    with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
-        # safely get latest conversation
         c = db.execute(
             select(Conversation).where(Conversation.user_id == u.id).order_by(Conversation.updated_at.desc())
         ).scalars().first()
