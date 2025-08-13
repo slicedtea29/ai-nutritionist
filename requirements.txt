@@ -1,0 +1,6 @@
+flask
+flask-cors
+sqlalchemy
+openai>=1.99.5
+gunicorn
+psycopg2-binary
