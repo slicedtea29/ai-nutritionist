@@ -1,32 +1,52 @@
 # server.py
 import os, json, traceback, datetime as dt
 from functools import wraps
-from flask import Flask, request, jsonify, session, abort
+from flask import Flask, request, jsonify, session, abort, g
 from flask_cors import CORS
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, create_engine, select
 from sqlalchemy.orm import declarative_base, relationship, Session
 from openai import OpenAI
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 # ----- Config -----
-APP_PASSWORD = os.environ.get("APP_PASSWORD")
-SECRET_KEY   = os.environ.get("SECRET_KEY", os.urandom(32))
-OPENAI_KEY   = os.environ.get("OPENAI_API_KEY")
-ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")   # e.g. https://<your>.vercel.app
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///app.db")
+APP_PASSWORD   = os.environ.get("APP_PASSWORD")
+SECRET_KEY     = os.environ.get("SECRET_KEY", os.urandom(32))
+OPENAI_KEY     = os.environ.get("OPENAI_API_KEY")
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")   # e.g. https://ai-nutritionist-sigma.vercel.app
+DATABASE_URL   = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 
 if not APP_PASSWORD:  raise SystemExit("ERROR: APP_PASSWORD not set.")
 if not OPENAI_KEY:    raise SystemExit("ERROR: OPENAI_API_KEY not set.")
 
+# token signer (7-day tokens)
+signer = URLSafeTimedSerializer(SECRET_KEY, salt="auth-token")
+
+def issue_token(user_id: int) -> str:
+    return signer.dumps({"uid": user_id})
+
+def verify_token(token: str, max_age_sec: int = 7*24*3600) -> int | None:
+    try:
+        data = signer.loads(token, max_age=max_age_sec)
+        return int(data.get("uid"))
+    except (BadSignature, SignatureExpired, ValueError, TypeError):
+        return None
+
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-# Make session cookie cross-site capable for frontend on a different domain
+# Cross-site cookie (desktop browsers); iOS Safari may still block 3rd-party cookies
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
-    SESSION_COOKIE_SECURE=True,        # requires HTTPS (Render uses HTTPS)
+    SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_NAME="ainutri_sess",
 )
-# CORS for your frontend; origin must NOT be "*" when using credentials
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGIN}}, supports_credentials=True)
+# CORS (must allow Authorization header for token fallback)
+CORS(
+    app,
+    resources={r"/*": {"origins": ALLOWED_ORIGIN}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Set-Cookie"],
+)
 
 client = OpenAI()
 MODEL = "gpt-4o-mini"
@@ -58,7 +78,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    title = Column(String(200), default="New Conversation")
+    title = Column(String(200), default="Coach")
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow)
     user = relationship("User", back_populates="conversations")
@@ -76,10 +96,23 @@ class Message(Base):
 Base.metadata.create_all(engine)
 
 # ----- Auth helpers -----
+def bearer_user_id() -> int | None:
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        return verify_token(token)
+    return None
+
 def require_auth(fn):
     @wraps(fn)
     def _wrap(*args, **kwargs):
+        # session cookie path
         if session.get("authed") is True and session.get("user_id"):
+            return fn(*args, **kwargs)
+        # bearer token path (for Safari iOS which blocks 3rd-party cookies)
+        uid = bearer_user_id()
+        if uid:
+            g.token_uid = uid
             return fn(*args, **kwargs)
         if request.method == "OPTIONS":
             return ("", 204)
@@ -87,7 +120,7 @@ def require_auth(fn):
     return _wrap
 
 def get_user(db: Session):
-    uid = session.get("user_id")
+    uid = session.get("user_id") or getattr(g, "token_uid", None)
     return db.get(User, uid) if uid else None
 
 # ----- OpenAI -----
@@ -113,9 +146,12 @@ def login():
         u = db.execute(select(User).limit(1)).scalar_one_or_none()
         if not u:
             u = User(); db.add(u); db.commit()
+        # set cookie session (works on desktop)
         session["authed"] = True
         session["user_id"] = u.id
-    return jsonify({"ok": True})
+        # ALSO return a token for browsers that block cross-site cookies (iOS)
+        token = issue_token(u.id)
+    return jsonify({"ok": True, "token": token})
 
 @app.route("/logout", methods=["POST", "OPTIONS"])
 @require_auth
@@ -164,7 +200,7 @@ def conversations():
                 select(Conversation).where(Conversation.user_id == u.id).order_by(Conversation.updated_at.desc())
             ).scalars().all()
             return jsonify([{"id": c.id, "title": c.title, "updated_at": c.updated_at.isoformat()} for c in rows])
-        title = (request.get_json(force=True) or {}).get("title") or "New Conversation"
+        title = (request.get_json(force=True) or {}).get("title") or "Coach"
         c = Conversation(user_id=u.id, title=title)
         db.add(c); db.commit()
         return jsonify({"id": c.id, "title": c.title})
@@ -204,7 +240,7 @@ def conv_messages(cid: int):
         db.commit()
         return jsonify({"reply": reply, "message_id": m_ai.id})
 
-# Legacy endpoint used by your current UI
+# Legacy endpoint used by the current UI
 @app.route("/chat", methods=["POST", "OPTIONS"])
 @require_auth
 def chat_legacy():

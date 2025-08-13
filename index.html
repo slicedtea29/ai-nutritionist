@@ -5,105 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Nutritionist</title>
 
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    /* --------------------------------------------------
-       THEME TOKENS (light, dark, dim)
-       -------------------------------------------------- */
     :root {
-      --bg: #0b0b0c;
-      --card: #121316;
-      --card-2: #121316;
-      --fg: #e7e7ea;
-      --muted: #a1a1ac;
-      --border: #24262b;
-      --accent: #22c55e;
-      --accent-2: #10b981;
-      --chip: #1e1f24;
-      --bubble-user: rgba(34,197,94,.10);
-      --bubble-user-border: rgba(34,197,94,.35);
-      --bubble-ai: rgba(255,255,255,.06);
+      --bg: #0b0b0c; --card: #121316; --card-2: #121316; --fg: #e7e7ea; --muted: #a1a1ac; --border: #24262b;
+      --accent: #22c55e; --accent-2: #10b981; --chip: #1e1f24; --bubble-user: rgba(34,197,94,.10);
+      --bubble-user-border: rgba(34,197,94,.35); --bubble-ai: rgba(255,255,255,.06);
     }
     [data-theme="system"] { color-scheme: light dark; }
     @media (prefers-color-scheme: light) {
-      [data-theme="system"] {
-        --bg:#f6f7f8; --card:#ffffff; --card-2:#ffffff; --fg:#0f1115; --muted:#5b5e66;
-        --border:#e7e8ea; --accent:#16a34a; --accent-2:#22c55e; --chip:#f0f1f3;
-        --bubble-user: rgba(22,163,74,.10); --bubble-user-border: rgba(22,163,74,.35); --bubble-ai:#f5f7fa;
-      }
+      [data-theme="system"] { --bg:#f6f7f8; --card:#fff; --card-2:#fff; --fg:#0f1115; --muted:#5b5e66; --border:#e7e8ea;
+        --accent:#16a34a; --accent-2:#22c55e; --chip:#f0f1f3; --bubble-user:rgba(22,163,74,.10);
+        --bubble-user-border:rgba(22,163,74,.35); --bubble-ai:#f5f7fa; }
     }
     [data-theme="light"] {
-      --bg:#f6f7f8; --card:#ffffff; --card-2:#ffffff; --fg:#0f1115; --muted:#5b5e66;
-      --border:#e7e8ea; --accent:#16a34a; --accent-2:#22c55e; --chip:#f0f1f3;
-      --bubble-user: rgba(22,163,74,.10); --bubble-user-border: rgba(22,163,74,.35); --bubble-ai:#f5f7fa;
+      --bg:#f6f7f8; --card:#fff; --card-2:#fff; --fg:#0f1115; --muted:#5b5e66; --border:#e7e8ea;
+      --accent:#16a34a; --accent-2:#22c55e; --chip:#f0f1f3; --bubble-user:rgba(22,163,74,.10);
+      --bubble-user-border:rgba(22,163,74,.35); --bubble-ai:#f5f7fa;
     }
     [data-theme="dark"] {
-      --bg:#0b0b0c; --card:#121316; --card-2:#121316; --fg:#e7e7ea; --muted:#a1a1ac;
-      --border:#24262b; --accent:#22c55e; --accent-2:#10b981; --chip:#1e1f24;
-      --bubble-user: rgba(34,197,94,.10); --bubble-user-border: rgba(34,197,94,.35); --bubble-ai:rgba(255,255,255,.06);
+      --bg:#0b0b0c; --card:#121316; --card-2:#121316; --fg:#e7e7ea; --muted:#a1a1ac; --border:#24262b;
+      --accent:#22c55e; --accent-2:#10b981; --chip:#1e1f24; --bubble-user:rgba(34,197,94,.10);
+      --bubble-user-border:rgba(34,197,94,.35); --bubble-ai:rgba(255,255,255,.06);
     }
     [data-theme="dim"] {
-      --bg:#111214; --card:#17181b; --card-2:#1b1c20; --fg:#e5e7eb; --muted:#adb1bb;
-      --border:#2a2c33; --accent:#7dd3fc; --accent-2:#60a5fa; --chip:#1f2126;
-      --bubble-user: rgba(125,211,252,.10); --bubble-user-border: rgba(125,211,252,.35); --bubble-ai:rgba(255,255,255,.05);
+      --bg:#111214; --card:#17181b; --card-2:#1b1c20; --fg:#e5e7eb; --muted:#adb1bb; --border:#2a2c33;
+      --accent:#7dd3fc; --accent-2:#60a5fa; --chip:#1f2126; --bubble-user:rgba(125,211,252,.10);
+      --bubble-user-border:rgba(125,211,252,.35); --bubble-ai:rgba(255,255,255,.05);
     }
-
-    /* --------------------------------------------------
-       PRIMITIVES / COMPONENTS
-       -------------------------------------------------- */
     html, body { height: 100%; }
     body { background: var(--bg); color: var(--fg); font-feature-settings: "ss01","cv02"; }
-
     .container-outer { max-width: 1200px; margin-inline: auto; padding-inline: 1rem; }
-
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
     .card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
     .card-body { padding: 16px; }
     .card-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
-
     .chip { background: var(--chip); border: 1px solid var(--border); color: var(--muted); padding: 2px 8px; border-radius: 999px; font-size: 12px; }
-
-    .btn { border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1; display: inline-flex; gap: 8px; align-items:center; justify-content:center; }
-    .btn-primary { background: var(--accent); color: #001007; }
-    .btn-primary:hover { filter: brightness(1.05); }
+    .btn { border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1; display:flex; gap:8px; align-items:center; justify-content:center; }
+    .btn-primary { background: var(--accent); color: #001007; } .btn-primary:hover { filter: brightness(1.05); }
     .btn-secondary { background: var(--card-2); border: 1px solid var(--border); }
     .btn-ghost { background: transparent; border: 1px solid var(--border); }
     .btn:disabled { opacity:.6; cursor:not-allowed; }
-
-    .input, .select, .textarea {
-      width: 100%; background: var(--card-2); color: var(--fg); border: 1px solid var(--border);
-      border-radius: 12px; padding: 9px 10px; font-size: 14px; outline: none;
-    }
+    .input, .select, .textarea { width: 100%; background: var(--card-2); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; padding: 9px 10px; font-size: 14px; outline: none; }
     .textarea { min-height: 112px; resize: vertical; }
-
     .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
     .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display:inline-block; }
-
-    .bubble-user {
-      background: var(--bubble-user); border: 1px solid var(--bubble-user-border);
-      border-radius: 14px; padding: 10px 12px; max-width: 85%;
-    }
-    .bubble-ai {
-      background: var(--bubble-ai); border: 1px solid var(--border);
-      border-radius: 14px; padding: 10px 12px; max-width: 85%;
-    }
-
+    .bubble-user { background: var(--bubble-user); border: 1px solid var(--bubble-user-border); border-radius: 14px; padding: 10px 12px; max-width: 85%; }
+    .bubble-ai { background: var(--bubble-ai); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; max-width: 85%; }
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font-size: 12px; color: var(--muted); }
-
-    /* Focus ring */
-    .input:focus, .select:focus, .textarea:focus, .btn:focus, select:focus, button:focus { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-
-    /* Range track/tick (simple) */
+    .input:focus, .select:focus, .textarea:focus, .btn:focus { outline: 2px solid var(--accent-2); outline-offset: 2px; }
     input[type="range"] { accent-color: var(--accent); width: 100%; }
-
-    /* Dialog */
     dialog { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; width: 540px; max-width: 95vw; }
   </style>
 </head>
@@ -189,13 +143,10 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between text-sm"><span>Protein (g)</span><span id="pOut" class="font-medium tabular-nums">180</span></div>
             <input id="pRange" type="range" min="80" max="260" step="5" value="180" />
-
             <div class="flex items-center justify-between text-sm"><span>Fat (g)</span><span id="fOut" class="font-medium tabular-nums">80</span></div>
             <input id="fRange" type="range" min="30" max="140" step="5" value="80" />
-
             <div class="flex items-center justify-between text-sm"><span>Carbs (g)</span><span id="cOut" class="font-medium tabular-nums">255</span></div>
             <input id="cRange" type="range" min="80" max="420" step="5" value="255" />
-
             <div class="text-xs" style="color: var(--muted)">~<span id="kcalOut">2450</span> kcal/day</div>
           </div>
         </div>
@@ -283,7 +234,6 @@
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="border-t py-6" style="border-color: var(--border);">
     <div class="container-outer text-xs flex items-center justify-between" style="color: var(--muted)">
       <span>© <span id="year"></span> AI Nutritionist</span>
@@ -291,11 +241,8 @@
     </div>
   </footer>
 
-  <!-- Preferences Modal -->
   <dialog id="prefsDialog">
-    <div class="card-header">
-      <h3 class="text-sm font-semibold">Dietary Preferences</h3>
-    </div>
+    <div class="card-header"><h3 class="text-sm font-semibold">Dietary Preferences</h3></div>
     <div class="card-body space-y-3">
       <label class="label">Foods you avoid or want more of</label>
       <textarea id="prefsText" class="textarea" placeholder="e.g., avoid dairy, prefer red meat, quick meals"></textarea>
@@ -316,43 +263,51 @@
       const v = e.target.value;
       document.documentElement.setAttribute("data-theme", v);
       localStorage.setItem("ai_nutritionist_theme", v);
-      rebuildCharts(); // recolor charts when theme swaps
+      rebuildCharts();
     });
 
     // ---------- API CONFIG ----------
     const API_BASE = "https://ai-nutritionist-zu5b.onrender.com"; // Render backend
-    let AUTH_TOKEN = null; // NEW: Bearer token fallback for iOS/Safari
+    let AUTH_TOKEN = localStorage.getItem("ainutri_token");        // Persist for iOS
 
     async function apiFetch(path, payload) {
       const headers = { "Content-Type": "application/json" };
-      if (AUTH_TOKEN) headers["Authorization"] = "Bearer " + AUTH_TOKEN; // add token if present
+      if (AUTH_TOKEN) headers["Authorization"] = "Bearer " + AUTH_TOKEN; // always send if present
       const r = await fetch(API_BASE + path, {
         method: "POST",
-        credentials: "include",               // try cookie path if allowed
+        credentials: "include",               // cookie path (desktop)
         headers,
         body: JSON.stringify(payload || {})
       });
-      if (!r.ok) throw new Error(await r.text());
+      if (!r.ok) {
+        const text = await r.text().catch(()=>String(r.status));
+        throw new Error(`HTTP ${r.status}: ${text}`);
+      }
       return r.json();
     }
 
     async function ensureLogin() {
-      try {
-        const pwd = prompt("Enter site password");
-        if (!pwd) throw new Error("No password");
-        const r = await fetch(API_BASE + "/login", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: pwd })
-        });
-        if (!r.ok) throw new Error("Login failed");
-        // read token for browsers that block cross-site cookies
-        const data = await r.json().catch(() => ({}));
-        if (data && data.token) AUTH_TOKEN = data.token;
-      } catch (e) {
-        alert("Login error. Refresh to try again.");
-        throw e;
+      // Quick probe if token exists
+      if (AUTH_TOKEN) {
+        try {
+          await apiFetch("/plan", { protein: 0, fat: 0, carbs: 0, prefs: "" });
+          return; // token valid
+        } catch { /* fall through to prompt */ }
+      }
+      // Prompt and login
+      const pwd = prompt("Enter site password");
+      if (!pwd) throw new Error("No password");
+      const r = await fetch(API_BASE + "/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd })
+      });
+      if (!r.ok) throw new Error("Login failed");
+      const data = await r.json().catch(() => ({}));
+      if (data && data.token) {
+        AUTH_TOKEN = data.token;
+        localStorage.setItem("ainutri_token", AUTH_TOKEN);
       }
     }
 
@@ -411,9 +366,7 @@
       sc.innerHTML = "";
       messages.forEach(m => {
         const wrap = document.createElement("div");
-        wrap.className = (m.role === "user")
-          ? "ml-auto bubble-user"
-          : "mr-auto bubble-ai";
+        wrap.className = (m.role === "user") ? "ml-auto bubble-user" : "mr-auto bubble-ai";
         wrap.innerHTML = `
           <div class="text-[11px] mb-1" style="color: var(--muted)">${m.role}</div>
           <div class="text-sm leading-relaxed whitespace-pre-wrap">${esc(m.content)}</div>
@@ -456,10 +409,8 @@
       const wctx = $("weightChart").getContext("2d");
       weightChart = new Chart(wctx, {
         type: "line",
-        data: {
-          labels: demo.map(d=>d.day),
-          datasets: [{ data: demo.map(d=>d.weight), borderColor: line, borderWidth: 2, tension: .35, pointRadius: 0 }]
-        },
+        data: { labels: demo.map(d=>d.day),
+          datasets: [{ data: demo.map(d=>d.weight), borderColor: line, borderWidth: 2, tension: .35, pointRadius: 0 }] },
         options: {
           plugins: { legend:{ display:false } },
           scales: {
@@ -482,11 +433,7 @@
         }
       });
     }
-    function rebuildCharts() {
-      if (weightChart) { weightChart.destroy(); }
-      if (calChart) { calChart.destroy(); }
-      initCharts();
-    }
+    function rebuildCharts() { if (weightChart) weightChart.destroy(); if (calChart) calChart.destroy(); initCharts(); }
 
     // ---------- API WRAPPERS ----------
     async function askAssistant(text) {
@@ -508,13 +455,11 @@
         meals = Array.isArray(res.meals) && res.meals.length
           ? res.meals
           : Array.from({ length: 6 }, (_, i) => ({
-              ...starterMeals[i % 3],
-              id: i + 1, title: starterMeals[i % 3].title + " #" + (i + 1)
+              ...starterMeals[i % 3], id: i + 1, title: starterMeals[i % 3].title + " #" + (i + 1)
             }));
         renderMeals();
       } catch (e) {
-        console.error(e);
-        alert("Plan generation failed.");
+        console.error(e); alert("Plan generation failed.");
       } finally { setLoading(false); }
     }
     async function analyzeMeal() {
@@ -525,45 +470,33 @@
         messages.push({ role:"assistant", content: res.advice || "No advice returned." });
         renderChat();
       } catch (e) {
-        console.error(e);
-        messages.push({ role:"assistant", content: "Meal analysis failed." });
-        renderChat();
+        console.error(e); messages.push({ role:"assistant", content: "Meal analysis failed." }); renderChat();
       } finally { setLoading(false); }
     }
 
     // ---------- EVENTS ----------
     function wireEvents() {
-      // Macros
       $("pRange").addEventListener("input", e => { macroBias.protein = +e.target.value; renderKcals(); });
       $("fRange").addEventListener("input", e => { macroBias.fat = +e.target.value; renderKcals(); });
       $("cRange").addEventListener("input", e => { macroBias.carbs = +e.target.value; renderKcals(); });
 
-      // Preferences dialog
       const dlg = $("prefsDialog");
       $("btnPrefs").addEventListener("click", () => dlg.showModal());
       $("prefsClose").addEventListener("click", () => dlg.close());
       $("prefsSave").addEventListener("click", () => dlg.close());
 
-      // Actions
       $("btnGeneratePlan").addEventListener("click", generatePlan);
       $("qaGenerate").addEventListener("click", generatePlan);
       $("btnAnalyzeMeal").addEventListener("click", analyzeMeal);
       $("qaAnalyze").addEventListener("click", analyzeMeal);
       $("qaBuildWeek").addEventListener("click", generatePlan);
 
-      // Chat
       const chatInput = $("chatInput");
       $("btnSend").addEventListener("click", async () => {
-        const text = chatInput.value.trim();
-        if (!text) return;
-        messages.push({ role:"user", content:text });
-        renderChat();
-        chatInput.value = "";
-        setLoading(true);
+        const text = chatInput.value.trim(); if (!text) return;
+        messages.push({ role:"user", content:text }); renderChat(); chatInput.value = ""; setLoading(true);
         const reply = await askAssistant(text);
-        messages.push({ role:"assistant", content: reply });
-        renderChat();
-        setLoading(false);
+        messages.push({ role:"assistant", content: reply }); renderChat(); setLoading(false);
       });
       chatInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("btnSend").click(); }
@@ -572,16 +505,10 @@
 
     // ---------- INIT ----------
     document.addEventListener("DOMContentLoaded", async () => {
-      try {
-        await ensureLogin();
-      } catch { return; }
+      try { await ensureLogin(); } catch { alert("Login error. Refresh the page."); return; }
       $("year").textContent = new Date().getFullYear();
       lucide.createIcons();
-      renderKcals();
-      renderMeals();
-      renderChat();
-      initCharts();
-      wireEvents();
+      renderKcals(); renderMeals(); renderChat(); initCharts(); wireEvents();
     });
   </script>
 </body>
