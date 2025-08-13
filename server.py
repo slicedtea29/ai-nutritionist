@@ -198,7 +198,7 @@ def conv_messages(cid: int):
         db.commit()
         return jsonify({"reply": reply, "message_id": m_ai.id})
 
-# Legacy endpoints (so your existing UI keeps working)
+# Legacy endpoint used by your current UI
 @app.route("/chat", methods=["POST", "OPTIONS"])
 @require_auth
 def chat_legacy():
@@ -208,9 +208,15 @@ def chat_legacy():
     with Session(engine) as db:
         u = get_user(db)
         if not u: return abort(401)
-        c = db.execute(select(Conversation).where(Conversation.user_id == u.id).order_by(Conversation.updated_at.desc())).scalar_one_or_none()
+        # FIX: safely get the latest conversation (or None)
+        c = db.execute(
+            select(Conversation)
+            .where(Conversation.user_id == u.id)
+            .order_by(Conversation.updated_at.desc())
+        ).scalars().first()
         if not c:
             c = Conversation(user_id=u.id, title="Coach"); db.add(c); db.commit()
+        # append + reply
         m_user = Message(conversation_id=c.id, role="user", content=text)
         db.add(m_user); db.flush()
         prefs_json = json.loads(u.preferences.data) if u.preferences else {}
